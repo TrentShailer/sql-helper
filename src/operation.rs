@@ -80,7 +80,17 @@ impl ToTokens for Operation {
         let steps = &self.steps;
         let count: usize = steps.len();
 
+        let doc_string = self
+            .steps
+            .iter()
+            .map(|step| format!("```sql\n{}\n```", step))
+            .collect::<Vec<_>>()
+            .join("\n\n");
+
+        let doc_string = format!("# SQL\n{doc_string}");
+
         let new_tokens = quote! {
+                    #[doc = #doc_string]
             pub fn #name() -> [&'static str; #count] {
                 [#( #steps ),*]
             }
