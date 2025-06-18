@@ -195,8 +195,8 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
 name = "cli-helper"
-version = "0.1.0"
-source = "git+https://github.com/trentshailer/cli-helper.git?rev=b5194ce#b5194ce73b6dec6ae003eb1fd601089e1ca70365"
+version = "0.2.0"
+source = "git+https://github.com/trentshailer/cli-helper.git?rev=1bd2aa5#1bd2aa5f011c941ee26ff9bf46931d498c9f18ec"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "sql-helper"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "clap",
  "cli-helper",

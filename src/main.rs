@@ -5,14 +5,17 @@ mod cli;
 mod operation;
 mod operation_group;
 
-use std::process::{Stdio, exit};
+use std::{
+    io::{self, Write},
+    process::{Stdio, exit},
+};
 
 use clap::Parser;
 use cli_helper::{Action, ActionResult, FileParser};
 use color_eyre::eyre::eyre;
 
 use crate::{
-    cli::{Cli, run_tests},
+    cli::{Cli, run_tests, start_test_database},
     operation_group::OperationGroup,
 };
 
@@ -64,6 +67,31 @@ fn main() -> color_eyre::Result<()> {
             }
 
             file_parser.write(target.as_deref()).bind_result(action)?;
+        }
+        cli::Commands::StartDatabase { migrations } => {
+            let result = start_test_database(migrations.as_deref());
+
+            if result.is_ok() {
+                let mut stdout = io::stdout().lock();
+                let _ = stdout.write(b"\nPress enter to kill database")?;
+                stdout.flush()?;
+                drop(stdout);
+
+                let mut buffer = String::new();
+                let _ = io::stdin().read_line(&mut buffer);
+            }
+
+            // Kill database
+            let mut child = std::process::Command::new("docker")
+                .args(["rm", "--force", "sql-helper-dev-db"])
+                .stdout(Stdio::null())
+                .spawn()?;
+            let status = child.wait()?;
+            if !status.success() {
+                return Err(eyre!("Killing dev database failed with status: {status}"));
+            }
+
+            result?;
         }
     }
 

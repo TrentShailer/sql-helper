@@ -4,7 +4,7 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 name = "sql-helper"
 rust-version = "1.85"
-version = "0.2.0"
+version = "0.3.0"
 
 [dependencies]
 # Generating source code
@@ -24,7 +24,7 @@ thiserror = "2.0"
 postgres = { version = "0.19" }
 
 # CLI Helper
-cli-helper = { git = "https://github.com/trentshailer/cli-helper.git", rev = "b5194ce", features = [
+cli-helper = { git = "https://github.com/trentshailer/cli-helper.git", rev = "1bd2aa5", features = [
     "generate",
 ] }
 # cli-helper = { path = "../cli-helper", features = ["generate"] }
