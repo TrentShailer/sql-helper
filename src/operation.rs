@@ -1,6 +1,10 @@
-use cli_helper::{Action, print_error, print_fail};
-use postgres::Client;
+use std::time::SystemTime;
+
+use cli_helper::{Action, print_error, print_fail, print_warning};
+use postgres::{Client, error::SqlState, types::ToSql};
 use quote::{ToTokens, format_ident, quote};
+use rand::{Rng, distr::Alphanumeric, random_bool};
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct Operation {
@@ -28,7 +32,7 @@ impl Operation {
     pub fn is_valid(&self, client: &mut Client, action: &mut Action) -> bool {
         let mut is_valid = true;
 
-        for (index, step) in self.steps.iter().enumerate() {
+        'step: for (index, step) in self.steps.iter().enumerate() {
             let statement = match client.prepare(step) {
                 Ok(statement) => statement,
                 Err(error) => {
@@ -52,6 +56,74 @@ impl Operation {
 
             if statement.params().is_empty() {
                 if let Err(error) = client.execute(&statement, &[]) {
+                    is_valid = false;
+
+                    print_fail(
+                        &format!(
+                            "Operation '{}' failed test on step {}",
+                            self.name,
+                            index + 1,
+                        ),
+                        action.indent + 1,
+                    );
+                    print_error(&error.to_string(), action.indent + 2);
+
+                    action.dont_overwrite();
+                }
+            } else {
+                let mut params = Vec::<Box<(dyn ToSql + Sync)>>::new();
+
+                for param in statement.params().iter().map(|param| param.name()) {
+                    match param {
+                        "bool" => params.push(Box::new(random_bool(0.5))),
+                        "bytea" => {
+                            let mut bytes = vec![0u8; 32];
+                            rand::rng().fill(bytes.as_mut_slice());
+                            params.push(Box::new(bytes));
+                        }
+                        "char" => params.push(Box::new(rand::random::<i8>())),
+                        "int8" => params.push(Box::new(rand::random::<i64>())),
+                        "int4" => params.push(Box::new(rand::random::<i32>())),
+                        "int2" => params.push(Box::new(rand::random::<i16>())),
+                        "float8" => params.push(Box::new(rand::random::<f64>())),
+                        "float4" => params.push(Box::new(rand::random::<f32>())),
+                        "text" | "varchar" => {
+                            let string = rand::rng()
+                                .sample_iter(&Alphanumeric)
+                                .take(32)
+                                .map(char::from)
+                                .collect::<String>();
+                            params.push(Box::new(string));
+                        }
+                        "timestamp" | "timestamptz" => params.push(Box::new(SystemTime::now())),
+                        "uuid" => params.push(Box::new(Uuid::new_v4())),
+
+                        param_type => {
+                            print_warning(
+                                &format!(
+                                    "could not test execution of operation '{}' step {}, generating data for '{}' is unsupported",
+                                    self.name,
+                                    index + 1,
+                                    param_type
+                                ),
+                                action.indent + 1,
+                            );
+                            action.dont_overwrite();
+                            continue 'step;
+                        }
+                    }
+                }
+                let borrowed_params: Vec<_> = params.iter().map(|param| param.as_ref()).collect();
+                if let Err(error) = client.execute(&statement, borrowed_params.as_slice()) {
+                    if let Some(error) = error.as_db_error() {
+                        match error.code() {
+                            &SqlState::FOREIGN_KEY_VIOLATION | &SqlState::CHECK_VIOLATION => {
+                                continue;
+                            }
+                            _ => {}
+                        }
+                    }
+
                     is_valid = false;
 
                     print_fail(

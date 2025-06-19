@@ -4,7 +4,7 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 name = "sql-helper"
 rust-version = "1.85"
-version = "0.3.0"
+version = "0.4.0"
 
 [dependencies]
 # Generating source code
@@ -17,11 +17,15 @@ clap = { version = "4.5", features = ["derive"] }
 color-eyre = { version = "0.6", default-features = false }
 regex = { version = "1.11", default-features = false, features = ["std"] }
 
+# Generating data
+rand = "0.9"
+uuid = { version = "1", features = ["v4"] }
+
 # Error handling
 thiserror = "2.0"
 
 # DB
-postgres = { version = "0.19" }
+postgres = { version = "0.19", features = ["with-uuid-1"] }
 
 # CLI Helper
 cli-helper = { git = "https://github.com/trentshailer/cli-helper.git", rev = "1bd2aa5", features = [
