@@ -1,0 +1,35 @@
+[package]
+name = "sql-helper"
+version = "0.4.0"
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Generating source code
+convert_case = { version = "0.8" }
+proc-macro2 = { version = "1.0", default-features = false }
+quote = "1.0"
+syn = "2.0"
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+regex = { version = "1.11", default-features = false, features = ["std"] }
+
+# Generating data
+rand = "0.9"
+uuid = { version = "1", features = ["v4"] }
+
+# DB
+postgres = { workspace = true, features = ["with-uuid-1"] }
+
+# CLI Helper
+cli-helper = { git = "https://github.com/trentshailer/cli-helper.git", rev = "724db57", features = [
+    "generate",
+] }
+# cli-helper = { path = "../../../cli-helper", features = ["generate"] }
+
+jiff = { version = "0.2" }
+sql-helper-lib = { workspace = true }

@@ -16,4 +16,4 @@ Helper CLI for working with SQL in my projects.
 
 ## Installing
 
-- `cargo install --locked --path .`
+- `cargo install --locked --path crates/sql-helper`
