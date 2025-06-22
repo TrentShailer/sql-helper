@@ -4,7 +4,7 @@ use convert_case::{Case, Casing};
 use postgres::{
     Client,
     error::SqlState,
-    types::{Kind, ToSql, Type},
+    types::{ToSql, Type},
 };
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
@@ -361,38 +361,48 @@ impl Operation {
             .enumerate()
             .map(|(index, param)| {
                 let param_type: syn::Type = match param {
-                    &Type::BOOL | &Type::BOOL_ARRAY => syn::parse_quote!(&'a bool),
-                    &Type::BYTEA | &Type::BYTEA_ARRAY => syn::parse_quote!(&'a [u8]),
-                    &Type::CHAR | &Type::CHAR_ARRAY => syn::parse_quote!(&'a i8),
-                    &Type::INT8 | &Type::INT8_ARRAY => syn::parse_quote!(&'a i64),
-                    &Type::INT4 | &Type::INT4_ARRAY => syn::parse_quote!(&'a i32),
-                    &Type::INT2 | &Type::INT2_ARRAY => syn::parse_quote!(&'a i16),
-                    &Type::FLOAT8 | &Type::FLOAT8_ARRAY => syn::parse_quote!(&'a f64),
-                    &Type::FLOAT4 | &Type::FLOAT4_ARRAY => syn::parse_quote!(&'a f32),
-                    &Type::UUID | &Type::UUID_ARRAY => syn::parse_quote!(&'a uuid::Uuid),
-                    &Type::TEXT | &Type::VARCHAR | &Type::TEXT_ARRAY | &Type::VARCHAR_ARRAY => {
+                    &Type::BOOL => syn::parse_quote!(&'a bool),
+                    &Type::BOOL_ARRAY => syn::parse_quote!(&'a bool),
+                    &Type::BYTEA => syn::parse_quote!(&'a [Vec<u8>]),
+                    &Type::BYTEA_ARRAY => syn::parse_quote!(&'a [u8]),
+                    &Type::CHAR => syn::parse_quote!(&'a i8),
+                    &Type::CHAR_ARRAY => syn::parse_quote!(&'a [i8]),
+                    &Type::INT8 => syn::parse_quote!(&'a i64),
+                    &Type::INT8_ARRAY => syn::parse_quote!(&'a [i64]),
+                    &Type::INT4 => syn::parse_quote!(&'a i32),
+                    &Type::INT4_ARRAY => syn::parse_quote!(&'a [i32]),
+                    &Type::INT2 => syn::parse_quote!(&'a i16),
+                    &Type::INT2_ARRAY => syn::parse_quote!(&'a [i16]),
+                    &Type::FLOAT8 => syn::parse_quote!(&'a f64),
+                    &Type::FLOAT8_ARRAY => syn::parse_quote!(&'a [f64]),
+                    &Type::FLOAT4 => syn::parse_quote!(&'a f32),
+                    &Type::FLOAT4_ARRAY => syn::parse_quote!(&'a [f32]),
+                    &Type::UUID => syn::parse_quote!(&'a uuid::Uuid),
+                    &Type::UUID_ARRAY => syn::parse_quote!(&'a [uuid::Uuid]),
+                    &Type::TEXT | &Type::VARCHAR => {
                         syn::parse_quote!(&'a str)
                     }
-                    &Type::TIMESTAMP | &Type::TIMESTAMP_ARRAY => {
+                    &Type::VARCHAR_ARRAY | &Type::TEXT_ARRAY => syn::parse_quote!(&'a [String]),
+                    &Type::TIMESTAMP => {
                         syn::parse_quote!(&'a sql_helper_lib::SqlDateTime)
                     }
-                    &Type::TIMESTAMPTZ | &Type::TIMESTAMPTZ_ARRAY => {
+                    &Type::TIMESTAMP_ARRAY => syn::parse_quote!(&'a [sql_helper_lib::SqlDateTime]),
+                    &Type::TIMESTAMPTZ => {
                         syn::parse_quote!(&'a sql_helper_lib::SqlTimestamp)
                     }
-                    &Type::DATE | &Type::DATE_ARRAY => {
+                    &Type::TIMESTAMPTZ_ARRAY => {
+                        syn::parse_quote!(&'a [sql_helper_lib::SqlTimestamp])
+                    }
+                    &Type::DATE => {
                         syn::parse_quote!(&'a sql_helper_lib::SqlDate)
                     }
-                    &Type::TIME | &Type::TIME_ARRAY => {
+                    &Type::DATE_ARRAY => syn::parse_quote!(&'a [sql_helper_lib::SqlDate]),
+                    &Type::TIME => {
                         syn::parse_quote!(&'a sql_helper_lib::SqlTime)
                     }
+                    &Type::TIME_ARRAY => syn::parse_quote!(&'a [sql_helper_lib::SqlTime]),
 
                     _ => unreachable!(),
-                };
-
-                let param_type = if let Kind::Array(_) = param.kind() {
-                    syn::parse_quote!(Vec<#param_type>)
-                } else {
-                    param_type
                 };
 
                 let is_optional = self.operators.iter().any(|operator| {
