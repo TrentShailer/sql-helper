@@ -26,7 +26,7 @@ uuid = { version = "1", features = ["v4"] }
 postgres = { workspace = true, features = ["with-uuid-1"] }
 
 # CLI Helper
-cli-helper = { git = "https://github.com/trentshailer/cli-helper.git", rev = "724db57", features = [
+cli-helper = { git = "https://github.com/trentshailer/cli-helper.git", rev = "88638d4", features = [
     "generate",
 ] }
 # cli-helper = { path = "../../../cli-helper", features = ["generate"] }

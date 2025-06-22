@@ -45,7 +45,13 @@ fn main() -> ReportResult<()> {
                 action.dont_overwrite();
             }
 
-            file_parser.write(target.as_deref()).bind_result(action)?;
+            file_parser
+                .write(
+                    target.as_deref(),
+                    env!("CARGO_PKG_NAME"),
+                    env!("CARGO_PKG_VERSION"),
+                )
+                .bind_result(action)?;
         }
         cli::Commands::StartDatabase { migrations } => {
             let mut database = Database::new("sql-helper-dev-database")?;

@@ -1,3 +1,5 @@
+use core::{cell::LazyCell, error::Error, fmt};
+
 use convert_case::{Case, Casing};
 use postgres::{
     Client,
@@ -7,16 +9,107 @@ use postgres::{
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use rand::{Rng, distr::Alphanumeric, random_bool};
+use regex::{Captures, Regex};
 use sql_helper_lib::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp};
 use uuid::Uuid;
 
 use crate::operation_group::{ParseOperationGroupError, ParseOperationGroupErrorKind};
 
 #[derive(Debug, Clone)]
+#[non_exhaustive]
+pub enum Operator {
+    Optional { parameter_index: usize },
+}
+impl TryFrom<Captures<'_>> for Operator {
+    type Error = OperatorError;
+
+    fn try_from(value: Captures<'_>) -> Result<Self, Self::Error> {
+        let op_code = value.name("op").unwrap().as_str().trim();
+        let params = value.name("params").unwrap().as_str().trim();
+
+        match op_code {
+            "opt" => {
+                let parameter: usize = params
+                    .get(1..)
+                    .ok_or_else(|| OperatorError {
+                        op_code: op_code.to_string(),
+                        params: params.to_string(),
+                        kind: OperatorErrorKind::InvalidParams {
+                            expected: "a SQL parameter",
+                            example: "$3",
+                        },
+                    })?
+                    .parse()
+                    .map_err(|_| OperatorError {
+                        op_code: op_code.to_string(),
+                        params: params.to_string(),
+                        kind: OperatorErrorKind::InvalidParams {
+                            expected: "a SQL parameter",
+                            example: "$3",
+                        },
+                    })?;
+                Ok(Self::Optional {
+                    parameter_index: parameter - 1,
+                })
+            }
+
+            op_code => unimplemented!("operator code `{op_code}`"),
+        }
+    }
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct OperatorError {
+    pub op_code: String,
+    pub params: String,
+    pub kind: OperatorErrorKind,
+}
+impl fmt::Display for OperatorError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "error parsing operator `{} {}`",
+            self.op_code, self.params,
+        )
+    }
+}
+impl Error for OperatorError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.kind)
+    }
+}
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum OperatorErrorKind {
+    #[non_exhaustive]
+    InvalidParams {
+        expected: &'static str,
+        example: &'static str,
+    },
+}
+impl fmt::Display for OperatorErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Self::InvalidParams {
+                expected, example, ..
+            } => {
+                write!(
+                    f,
+                    "invalid parameters: expected {expected}, e.g., `{example}`"
+                )
+            }
+        }
+    }
+}
+impl Error for OperatorErrorKind {}
+
+#[derive(Debug, Clone)]
 pub struct Operation {
     pub name: String,
     pub statements: Vec<String>,
     pub params: Vec<Type>,
+    pub operators: Vec<Operator>,
 }
 
 impl Operation {
@@ -25,7 +118,23 @@ impl Operation {
         sql: String,
         client: &mut Client,
     ) -> Result<Self, ParseOperationGroupError> {
-        let statements: Vec<String> = sql
+        // Regex to extract operators
+        let operator_regex: LazyCell<Regex> =
+            LazyCell::new(|| Regex::new(r"(?m)^-- (?<op>opt) (?<params>.*)$").unwrap());
+        let operators: Vec<_> = operator_regex
+            .captures_iter(&sql)
+            .map(Operator::try_from)
+            .collect::<Result<_, _>>()
+            .map_err(|source| ParseOperationGroupError {
+                operation: Some(name.clone()),
+                kind: ParseOperationGroupErrorKind::OperatorError { source },
+            })?;
+
+        // Regex to remove comments
+        let comment_regex: LazyCell<Regex> = LazyCell::new(|| Regex::new(r"(?m)--.*").unwrap());
+
+        let statements: Vec<String> = comment_regex
+            .replace_all(&sql, "")
             .split_inclusive(';')
             .filter_map(|statement| {
                 let sql = statement.trim();
@@ -115,6 +224,7 @@ impl Operation {
             name,
             statements,
             params: operation_params,
+            operators,
         })
     }
 
@@ -165,7 +275,7 @@ impl Operation {
             .params
             .iter()
             .enumerate()
-            .map(|(index, _)| format_ident!("param_{index}"))
+            .map(|(index, _)| format_ident!("p{}", index + 1))
             .collect();
 
         let fields: Vec<TokenStream> = self
@@ -173,6 +283,14 @@ impl Operation {
             .iter()
             .enumerate()
             .map(|(index, param)| {
+                let is_optional = self.operators.iter().any(|operator| {
+                    #[expect(irrefutable_let_patterns)]
+                    if let Operator::Optional { parameter_index } = operator {
+                        return parameter_index == &index;
+                    }
+                    false
+                });
+
                 let param_type: syn::Type = match param {
                     &Type::BOOL => syn::parse_quote!(&'a bool),
                     &Type::BYTEA => syn::parse_quote!(&'a [u8]),
@@ -191,6 +309,13 @@ impl Operation {
 
                     _ => unreachable!(),
                 };
+
+                let param_type = if is_optional {
+                    syn::parse_quote!(Option<#param_type>)
+                } else {
+                    param_type
+                };
+
                 let name = &argument_names[index];
 
                 quote! {

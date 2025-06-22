@@ -195,8 +195,8 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
 name = "cli-helper"
-version = "0.3.0"
-source = "git+https://github.com/trentshailer/cli-helper.git?rev=724db57#724db57a813aca005ea859d9a6b447f76528e39e"
+version = "0.4.0"
+source = "git+https://github.com/trentshailer/cli-helper.git?rev=88638d4#88638d4d447d3682f57c1da868d4ed303ca82cf7"
 dependencies = [
  "convert_case",
  "proc-macro2",

@@ -5,7 +5,7 @@ use postgres::Client;
 use quote::{ToTokens, quote};
 use regex::Regex;
 
-use crate::operation::Operation;
+use crate::operation::{Operation, OperatorError};
 
 #[derive(Debug, Clone)]
 pub struct OperationGroup(pub Vec<Operation>);
@@ -105,6 +105,9 @@ pub enum ParseOperationGroupErrorKind {
         param_index: usize,
         param_type: String,
     },
+
+    #[non_exhaustive]
+    OperatorError { source: OperatorError },
 }
 impl fmt::Display for ParseOperationGroupErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -156,6 +159,7 @@ impl fmt::Display for ParseOperationGroupErrorKind {
                 param_index + 1,
                 param_type,
             ),
+            Self::OperatorError { .. } => write!(f, "operation contained an invalid operator"),
         }
     }
 }
@@ -169,6 +173,7 @@ impl Error for ParseOperationGroupErrorKind {
                     Some(source)
                 }
             }
+            Self::OperatorError { source, .. } => Some(source),
             _ => None,
         }
     }
