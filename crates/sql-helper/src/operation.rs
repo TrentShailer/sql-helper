@@ -4,7 +4,7 @@ use convert_case::{Case, Casing};
 use postgres::{
     Client,
     error::SqlState,
-    types::{ToSql, Type},
+    types::{Kind, ToSql, Type},
 };
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
@@ -231,17 +231,58 @@ impl Operation {
     fn data_for_type(param: &Type) -> Option<Box<dyn ToSql + Sync>> {
         match param {
             &Type::BOOL => Some(Box::new(random_bool(0.5))),
+            &Type::BOOL_ARRAY => {
+                let mut data = vec![false; 4];
+                rand::rng().fill(data.as_mut_slice());
+                Some(Box::new(data))
+            }
             &Type::BYTEA => {
                 let mut bytes = vec![0u8; 32];
                 rand::rng().fill(bytes.as_mut_slice());
                 Some(Box::new(bytes))
             }
+            &Type::BYTEA_ARRAY => {
+                let mut bytes = vec![0u8; 32];
+                rand::rng().fill(bytes.as_mut_slice());
+                let bytes = vec![bytes; 2];
+                Some(Box::new(bytes))
+            }
             &Type::CHAR => Some(Box::new(rand::random::<i8>())),
+            &Type::CHAR_ARRAY => {
+                let mut data = vec![0i8; 4];
+                rand::rng().fill(data.as_mut_slice());
+                Some(Box::new(data))
+            }
             &Type::INT8 => Some(Box::new(rand::random::<i64>())),
+            &Type::INT8_ARRAY => {
+                let mut data = vec![0i64; 4];
+                rand::rng().fill(data.as_mut_slice());
+                Some(Box::new(data))
+            }
             &Type::INT4 => Some(Box::new(rand::random::<i32>())),
+            &Type::INT4_ARRAY => {
+                let mut data = vec![0i32; 4];
+                rand::rng().fill(data.as_mut_slice());
+                Some(Box::new(data))
+            }
             &Type::INT2 => Some(Box::new(rand::random::<i16>())),
+            &Type::INT2_ARRAY => {
+                let mut data = vec![0i16; 4];
+                rand::rng().fill(data.as_mut_slice());
+                Some(Box::new(data))
+            }
             &Type::FLOAT8 => Some(Box::new(rand::random::<f64>())),
+            &Type::FLOAT8_ARRAY => {
+                let mut data = vec![0f64; 4];
+                rand::rng().fill(data.as_mut_slice());
+                Some(Box::new(data))
+            }
             &Type::FLOAT4 => Some(Box::new(rand::random::<f32>())),
+            &Type::FLOAT4_ARRAY => {
+                let mut data = vec![0f32; 4];
+                rand::rng().fill(data.as_mut_slice());
+                Some(Box::new(data))
+            }
             &Type::TEXT | &Type::VARCHAR => {
                 let string = rand::rng()
                     .sample_iter(&Alphanumeric)
@@ -249,6 +290,14 @@ impl Operation {
                     .map(char::from)
                     .collect::<String>();
                 Some(Box::new(string))
+            }
+            &Type::TEXT_ARRAY | &Type::VARCHAR_ARRAY => {
+                let data = rand::rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(4)
+                    .map(char::from)
+                    .collect::<String>();
+                Some(Box::new(vec![data; 4]))
             }
             &Type::TIMESTAMP => Some(Box::new(SqlDateTime(jiff::civil::DateTime::constant(
                 2024,
@@ -259,10 +308,38 @@ impl Operation {
                 5,
                 123_456_789,
             )))),
+            &Type::TIMESTAMP_ARRAY => {
+                let data = SqlDateTime(jiff::civil::DateTime::constant(
+                    2024,
+                    2,
+                    29,
+                    21,
+                    30,
+                    5,
+                    123_456_789,
+                ));
+                Some(Box::new(vec![data; 4]))
+            }
             &Type::TIMESTAMPTZ => Some(Box::new(SqlTimestamp(jiff::Timestamp::now()))),
+            &Type::TIMESTAMPTZ_ARRAY => {
+                let data = SqlTimestamp(jiff::Timestamp::now());
+                Some(Box::new(vec![data; 4]))
+            }
             &Type::DATE => Some(Box::new(SqlDate(jiff::civil::date(2024, 2, 29)))),
+            &Type::DATE_ARRAY => {
+                let data = SqlDate(jiff::civil::date(2024, 2, 29));
+                Some(Box::new(vec![data; 4]))
+            }
             &Type::TIME => Some(Box::new(SqlTime(jiff::civil::time(21, 30, 5, 123_456_789)))),
+            &Type::TIME_ARRAY => {
+                let data = SqlTime(jiff::civil::time(21, 30, 5, 123_456_789));
+                Some(Box::new(vec![data; 4]))
+            }
             &Type::UUID => Some(Box::new(Uuid::new_v4())),
+            &Type::UUID_ARRAY => {
+                let data = Uuid::new_v4();
+                Some(Box::new(vec![data; 4]))
+            }
 
             _ => None,
         }
@@ -283,6 +360,41 @@ impl Operation {
             .iter()
             .enumerate()
             .map(|(index, param)| {
+                let param_type: syn::Type = match param {
+                    &Type::BOOL | &Type::BOOL_ARRAY => syn::parse_quote!(&'a bool),
+                    &Type::BYTEA | &Type::BYTEA_ARRAY => syn::parse_quote!(&'a [u8]),
+                    &Type::CHAR | &Type::CHAR_ARRAY => syn::parse_quote!(&'a i8),
+                    &Type::INT8 | &Type::INT8_ARRAY => syn::parse_quote!(&'a i64),
+                    &Type::INT4 | &Type::INT4_ARRAY => syn::parse_quote!(&'a i32),
+                    &Type::INT2 | &Type::INT2_ARRAY => syn::parse_quote!(&'a i16),
+                    &Type::FLOAT8 | &Type::FLOAT8_ARRAY => syn::parse_quote!(&'a f64),
+                    &Type::FLOAT4 | &Type::FLOAT4_ARRAY => syn::parse_quote!(&'a f32),
+                    &Type::UUID | &Type::UUID_ARRAY => syn::parse_quote!(&'a uuid::Uuid),
+                    &Type::TEXT | &Type::VARCHAR | &Type::TEXT_ARRAY | &Type::VARCHAR_ARRAY => {
+                        syn::parse_quote!(&'a str)
+                    }
+                    &Type::TIMESTAMP | &Type::TIMESTAMP_ARRAY => {
+                        syn::parse_quote!(&'a sql_helper_lib::SqlDateTime)
+                    }
+                    &Type::TIMESTAMPTZ | &Type::TIMESTAMPTZ_ARRAY => {
+                        syn::parse_quote!(&'a sql_helper_lib::SqlTimestamp)
+                    }
+                    &Type::DATE | &Type::DATE_ARRAY => {
+                        syn::parse_quote!(&'a sql_helper_lib::SqlDate)
+                    }
+                    &Type::TIME | &Type::TIME_ARRAY => {
+                        syn::parse_quote!(&'a sql_helper_lib::SqlTime)
+                    }
+
+                    _ => unreachable!(),
+                };
+
+                let param_type = if let Kind::Array(_) = param.kind() {
+                    syn::parse_quote!(Vec<#param_type>)
+                } else {
+                    param_type
+                };
+
                 let is_optional = self.operators.iter().any(|operator| {
                     #[expect(irrefutable_let_patterns)]
                     if let Operator::Optional { parameter_index } = operator {
@@ -290,25 +402,6 @@ impl Operation {
                     }
                     false
                 });
-
-                let param_type: syn::Type = match param {
-                    &Type::BOOL => syn::parse_quote!(&'a bool),
-                    &Type::BYTEA => syn::parse_quote!(&'a [u8]),
-                    &Type::CHAR => syn::parse_quote!(&'a i8),
-                    &Type::INT8 => syn::parse_quote!(&'a i64),
-                    &Type::INT4 => syn::parse_quote!(&'a i32),
-                    &Type::INT2 => syn::parse_quote!(&'a i16),
-                    &Type::FLOAT8 => syn::parse_quote!(&'a f64),
-                    &Type::FLOAT4 => syn::parse_quote!(&'a f32),
-                    &Type::UUID => syn::parse_quote!(&'a uuid::Uuid),
-                    &Type::TEXT | &Type::VARCHAR => syn::parse_quote!(&'a str),
-                    &Type::TIMESTAMP => syn::parse_quote!(&'a sql_helper_lib::SqlDateTime),
-                    &Type::TIMESTAMPTZ => syn::parse_quote!(&'a sql_helper_lib::SqlTimestamp),
-                    &Type::DATE => syn::parse_quote!(&'a sql_helper_lib::SqlDate),
-                    &Type::TIME => syn::parse_quote!(&'a sql_helper_lib::SqlTime),
-
-                    _ => unreachable!(),
-                };
 
                 let param_type = if is_optional {
                     syn::parse_quote!(Option<#param_type>)
