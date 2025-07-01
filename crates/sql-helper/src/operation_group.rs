@@ -1,9 +1,9 @@
 use core::{cell::LazyCell, error::Error, fmt};
 
-use cli_helper::{ParseFrom, to_valid_ident};
 use postgres::Client;
 use quote::{ToTokens, quote};
 use regex::Regex;
+use ts_cli_helper::{ParseFrom, to_valid_ident};
 
 use crate::operation::{Operation, OperatorError};
 

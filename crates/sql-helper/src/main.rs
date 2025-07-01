@@ -15,12 +15,13 @@ use std::{
 };
 
 use clap::Parser;
-use cli_helper::{Action, ActionResult, FileParser, ReportResult, State, print_success};
 use postgres::{Client, NoTls};
+use ts_cli_helper::{Action, ActionResult, FileParser, State, print_success};
+use ts_rust_helper::error::ReportResult;
 
 use crate::{cli::Cli, operation_group::OperationGroup};
 
-fn main() -> ReportResult<()> {
+fn main() -> ReportResult<'static, ()> {
     let cli = Cli::parse();
 
     match cli.command {

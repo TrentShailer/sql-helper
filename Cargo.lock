@@ -194,19 +194,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
-name = "cli-helper"
-version = "0.4.0"
-source = "git+https://github.com/trentshailer/cli-helper.git?rev=88638d4#88638d4d447d3682f57c1da868d4ed303ca82cf7"
-dependencies = [
- "convert_case",
- "proc-macro2",
- "quote",
- "regex",
- "simply_colored",
- "syn",
-]
-
-[[package]]
 name = "colorchoice"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -796,10 +783,9 @@ dependencies = [
 
 [[package]]
 name = "sql-helper"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "clap",
- "cli-helper",
  "convert_case",
  "jiff",
  "postgres",
@@ -807,20 +793,11 @@ dependencies = [
  "quote",
  "rand",
  "regex",
- "sql-helper-lib",
  "syn",
+ "ts-cli-helper",
+ "ts-rust-helper",
+ "ts-sql-helper-lib",
  "uuid",
-]
-
-[[package]]
-name = "sql-helper-lib"
-version = "0.2.0"
-dependencies = [
- "bytes",
- "jiff",
- "postgres",
- "postgres-protocol",
- "serde",
 ]
 
 [[package]]
@@ -924,6 +901,52 @@ dependencies = [
  "futures-sink",
  "pin-project-lite",
  "tokio",
+]
+
+[[package]]
+name = "ts-cli-helper"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7af94e5f1dcb9c1c774cfd7820d4043f6da783383ca90353a39a4978423c7271"
+dependencies = [
+ "convert_case",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "simply_colored",
+ "syn",
+]
+
+[[package]]
+name = "ts-rust-helper"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c1a1fafb99495e0d76a959c845a78ac8a1ecaaccaea9d50842642299a3c7c7a"
+dependencies = [
+ "log",
+ "simply_colored",
+]
+
+[[package]]
+name = "ts-sql-helper-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+ "ts-sql-helper-lib",
+]
+
+[[package]]
+name = "ts-sql-helper-lib"
+version = "0.3.0"
+dependencies = [
+ "bytes",
+ "jiff",
+ "postgres",
+ "postgres-protocol",
+ "serde",
+ "ts-sql-helper-derive",
 ]
 
 [[package]]

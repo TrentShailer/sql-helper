@@ -1,6 +1,6 @@
 [package]
 name = "sql-helper"
-version = "0.5.1"
+version = "0.5.2"
 
 authors.workspace = true
 edition.workspace = true
@@ -26,10 +26,8 @@ uuid = { version = "1", features = ["v4"] }
 postgres = { workspace = true, features = ["with-uuid-1"] }
 
 # CLI Helper
-cli-helper = { git = "https://github.com/trentshailer/cli-helper.git", rev = "88638d4", features = [
-    "generate",
-] }
-# cli-helper = { path = "../../../cli-helper", features = ["generate"] }
+ts-cli-helper = { version = "0.5", features = ["generate"] }
+ts-rust-helper = "0.4"
 
 jiff = { version = "0.2" }
-sql-helper-lib = { workspace = true }
+ts-sql-helper-lib = { workspace = true }

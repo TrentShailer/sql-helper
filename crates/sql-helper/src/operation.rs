@@ -10,7 +10,7 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use rand::{Rng, distr::Alphanumeric, random_bool};
 use regex::{Captures, Regex};
-use sql_helper_lib::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp};
+use ts_sql_helper_lib::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp};
 use uuid::Uuid;
 
 use crate::operation_group::{ParseOperationGroupError, ParseOperationGroupErrorKind};
@@ -460,7 +460,7 @@ impl ToTokens for Operation {
         let doc_string = self
             .statements
             .iter()
-            .map(|step| format!("```sql\n{}\n```", step))
+            .map(|step| format!("```sql\n{step}\n```"))
             .collect::<Vec<_>>()
             .join("\n\n");
 
