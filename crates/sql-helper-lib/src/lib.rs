@@ -13,4 +13,4 @@ pub use postgres;
 pub use postgres_protocol;
 
 #[cfg(feature = "derive")]
-pub use ts_sql_helper_derive::FromRow;
+pub use ts_sql_helper_derive::{FromRow, FromSql};
