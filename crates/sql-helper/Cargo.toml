@@ -1,5 +1,6 @@
 [package]
 name = "sql-helper"
+publish = false
 version = "0.5.2"
 
 authors.workspace = true
