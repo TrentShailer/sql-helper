@@ -384,23 +384,25 @@ impl Operation {
                     }
                     &Type::VARCHAR_ARRAY | &Type::TEXT_ARRAY => syn::parse_quote!(&'a [String]),
                     &Type::TIMESTAMP => {
-                        syn::parse_quote!(&'a sql_helper_lib::SqlDateTime)
+                        syn::parse_quote!(&'a ts_sql_helper_lib::SqlDateTime)
                     }
-                    &Type::TIMESTAMP_ARRAY => syn::parse_quote!(&'a [sql_helper_lib::SqlDateTime]),
+                    &Type::TIMESTAMP_ARRAY => {
+                        syn::parse_quote!(&'a [ts_sql_helper_lib::SqlDateTime])
+                    }
                     &Type::TIMESTAMPTZ => {
-                        syn::parse_quote!(&'a sql_helper_lib::SqlTimestamp)
+                        syn::parse_quote!(&'a ts_sql_helper_lib::SqlTimestamp)
                     }
                     &Type::TIMESTAMPTZ_ARRAY => {
-                        syn::parse_quote!(&'a [sql_helper_lib::SqlTimestamp])
+                        syn::parse_quote!(&'a [ts_sql_helper_lib::SqlTimestamp])
                     }
                     &Type::DATE => {
-                        syn::parse_quote!(&'a sql_helper_lib::SqlDate)
+                        syn::parse_quote!(&'a ts_sql_helper_lib::SqlDate)
                     }
-                    &Type::DATE_ARRAY => syn::parse_quote!(&'a [sql_helper_lib::SqlDate]),
+                    &Type::DATE_ARRAY => syn::parse_quote!(&'a [ts_sql_helper_lib::SqlDate]),
                     &Type::TIME => {
-                        syn::parse_quote!(&'a sql_helper_lib::SqlTime)
+                        syn::parse_quote!(&'a ts_sql_helper_lib::SqlTime)
                     }
-                    &Type::TIME_ARRAY => syn::parse_quote!(&'a [sql_helper_lib::SqlTime]),
+                    &Type::TIME_ARRAY => syn::parse_quote!(&'a [ts_sql_helper_lib::SqlTime]),
 
                     _ => unreachable!(),
                 };
