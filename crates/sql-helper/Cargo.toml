@@ -1,7 +1,7 @@
 [package]
 name = "sql-helper"
 publish = false
-version = "0.5.3"
+version = "0.5.4"
 
 authors.workspace = true
 edition.workspace = true
@@ -28,7 +28,7 @@ postgres = { workspace = true, features = ["with-uuid-1"] }
 
 # CLI Helper
 ts-cli-helper = { version = "0.5", features = ["generate"] }
-ts-rust-helper = "0.4"
+ts-rust-helper = { version = "0.5", features = ["styled"] }
 
 jiff = { version = "0.2" }
 ts-sql-helper-lib = { workspace = true }

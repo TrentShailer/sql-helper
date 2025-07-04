@@ -362,9 +362,9 @@ impl Operation {
             .map(|(index, param)| {
                 let param_type: syn::Type = match param {
                     &Type::BOOL => syn::parse_quote!(&'a bool),
-                    &Type::BOOL_ARRAY => syn::parse_quote!(&'a bool),
-                    &Type::BYTEA => syn::parse_quote!(&'a [Vec<u8>]),
-                    &Type::BYTEA_ARRAY => syn::parse_quote!(&'a [u8]),
+                    &Type::BOOL_ARRAY => syn::parse_quote!(&'a [bool]),
+                    &Type::BYTEA => syn::parse_quote!(&'a [u8]),
+                    &Type::BYTEA_ARRAY => syn::parse_quote!(&'a [Vec<u8>]),
                     &Type::CHAR => syn::parse_quote!(&'a i8),
                     &Type::CHAR_ARRAY => syn::parse_quote!(&'a [i8]),
                     &Type::INT8 => syn::parse_quote!(&'a i64),
