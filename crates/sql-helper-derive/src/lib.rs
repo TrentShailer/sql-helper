@@ -32,13 +32,11 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
     let each_field_from_row = fields.named.iter().filter_map(|f| {
         let name = f.ident.as_ref()?;
-
+        let name_lit = name.to_string();
         let field_type = &f.ty;
 
-        let name_lit = name.to_string();
-
         Some(quote_spanned! {f.span()=>
-            let #name: #field_type = row.try_get(#name_lit).ok()?;
+            let #name: #field_type = row.try_get(#name_lit)?;
         })
     });
 
@@ -50,10 +48,10 @@ pub fn derive_from_row(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     let expanded = quote! {
         // The generated impl.
         impl #impl_generics ts_sql_helper_lib::FromRow for #name #ty_generics #where_clause {
-            fn from_row(row: &ts_sql_helper_lib::postgres::Row) -> Option<Self> {
+            fn from_row(row: &ts_sql_helper_lib::postgres::Row) -> Result<Self, ts_sql_helper_lib::postgres::Error> {
                 #( #each_field_from_row )*
 
-                Some(Self {
+                Ok(Self {
                     #( #struct_fields ),*
                 })
             }

@@ -935,7 +935,7 @@ checksum = "3265cf7dc2ec92a2b9d5477bf01140571b8a122e4849374d18ab564c4303933c"
 
 [[package]]
 name = "ts-sql-helper-derive"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -945,7 +945,7 @@ dependencies = [
 
 [[package]]
 name = "ts-sql-helper-lib"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "bytes",
  "jiff",
