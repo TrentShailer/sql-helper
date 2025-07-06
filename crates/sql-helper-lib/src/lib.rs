@@ -11,6 +11,7 @@ pub use postgres_types_jiff_0_2::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp};
 
 pub use postgres;
 pub use postgres_protocol;
+pub use postgres_types;
 
 #[cfg(feature = "derive")]
 pub use ts_sql_helper_derive::{FromRow, FromSql};

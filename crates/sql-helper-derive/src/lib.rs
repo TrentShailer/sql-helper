@@ -76,7 +76,10 @@ pub fn derive_from_sql(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
     let (repr, accepts, from_sql) = {
         let mut repr_type = parse_quote!(&str);
-        let mut accepts = quote!(ts_sql_helper_lib::postgres::types::accepts!(TEXT));
+        let mut accepts: Vec<Type> = vec![
+            parse_quote!(ts_sql_helper_lib::postgres_types::Type::TEXT),
+            parse_quote!(ts_sql_helper_lib::postgres_types::Type::VARCHAR),
+        ];
         let mut from_sql = quote!(ts_sql_helper_lib::postgres_protocol::types::text_from_sql(
             raw
         )?);
@@ -91,22 +94,22 @@ pub fn derive_from_sql(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
             };
 
             if arg == parse_quote!(i8) {
-                accepts = quote!(ts_sql_helper_lib::postgres::types::accepts!(CHAR));
+                accepts = vec![parse_quote!(ts_sql_helper_lib::postgres_types::Type::CHAR)];
                 from_sql = quote!(ts_sql_helper_lib::postgres_protocol::types::char_from_sql(
                     raw
                 )?);
             } else if arg == parse_quote!(i16) {
-                accepts = quote!(ts_sql_helper_lib::postgres::types::accepts!(INT2));
+                accepts = vec![parse_quote!(ts_sql_helper_lib::postgres_types::Type::INT2)];
                 from_sql = quote!(ts_sql_helper_lib::postgres_protocol::types::int2_from_sql(
                     raw
                 )?);
             } else if arg == parse_quote!(i32) {
-                accepts = quote!(ts_sql_helper_lib::postgres::types::accepts!(INT4));
+                accepts = vec![parse_quote!(ts_sql_helper_lib::postgres_types::Type::INT4)];
                 from_sql = quote!(ts_sql_helper_lib::postgres_protocol::types::int4_from_sql(
                     raw
                 )?);
             } else if arg == parse_quote!(i64) {
-                accepts = quote!(ts_sql_helper_lib::postgres::types::accepts!(INT8));
+                accepts = vec![parse_quote!(ts_sql_helper_lib::postgres_types::Type::INT8)];
                 from_sql = quote!(ts_sql_helper_lib::postgres_protocol::types::int8_from_sql(
                     raw
                 )?);
@@ -132,8 +135,12 @@ pub fn derive_from_sql(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
                 Ok(value)
             }
 
-            #accepts;
-
+            fn accepts(ty: &ts_sql_helper_lib::postgres_types::Type) -> bool {
+                match (*ty) {
+                    #(#accepts)|* => true,
+                    _ => false,
+                }
+            }
         }
     };
 
