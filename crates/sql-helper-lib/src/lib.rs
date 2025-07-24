@@ -6,7 +6,7 @@ mod from_row;
 mod postgres_types_jiff_0_2;
 
 pub use error::SqlError;
-pub use from_row::FromRow;
+pub use from_row::{FromRow, ParseFromRow};
 pub use postgres_types_jiff_0_2::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp};
 
 pub use postgres;
@@ -14,4 +14,4 @@ pub use postgres_protocol;
 pub use postgres_types;
 
 #[cfg(feature = "derive")]
-pub use ts_sql_helper_derive::{FromRow, FromSql};
+pub use ts_sql_helper_derive::{FromRow, FromSql, query};

@@ -937,7 +937,6 @@ checksum = "3265cf7dc2ec92a2b9d5477bf01140571b8a122e4849374d18ab564c4303933c"
 name = "ts-sql-helper-derive"
 version = "0.3.1"
 dependencies = [
- "proc-macro2",
  "quote",
  "syn",
  "ts-sql-helper-lib",
