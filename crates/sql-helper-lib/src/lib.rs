@@ -3,10 +3,13 @@
 
 mod error;
 mod from_row;
+mod migrations;
 mod postgres_types_jiff_0_2;
+pub mod test;
 
 pub use error::SqlError;
 pub use from_row::{FromRow, ParseFromRow};
+pub use migrations::{MigrationError, perform_migrations};
 pub use postgres_types_jiff_0_2::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp};
 
 pub use postgres;

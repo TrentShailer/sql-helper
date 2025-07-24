@@ -239,7 +239,20 @@ pub fn query(input: TokenStream) -> TokenStream {
         }
     });
 
-    // TODO tests
+    let test_name = format_ident!("test_{struct_name}");
+    let test = quote! {
+        #[cfg(test)]
+        #[allow(non_snake_case)]
+        #[test]
+        fn #test_name() {
+            use ts_sql_helper_lib::test::get_test_database_connection;
+
+            let (client, _teardown) = get_test_database_connection();
+            let mut client = client.lock().unwrap();
+            client.prepare(#struct_name::QUERY).unwrap();
+        }
+    };
+
     quote! {
         struct #struct_name;
         impl #struct_name {
@@ -262,6 +275,7 @@ pub fn query(input: TokenStream) -> TokenStream {
                 ]
             }
         }
+        #test
     }
     .into()
 }
