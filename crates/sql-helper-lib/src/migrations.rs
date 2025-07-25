@@ -1,28 +1,73 @@
 //! Helpers for running migrations
 //!
 
-use std::{env::current_dir, ffi::OsStr, fs, io, path::PathBuf};
-
-use postgres::GenericClient;
+use std::{
+    env::current_dir,
+    ffi::OsStr,
+    fs::{self, DirEntry},
+    io,
+    path::PathBuf,
+};
 
 /// Runs the migrations in `current_dir()/migrations/*.sql` on the client, migrations are executed
 /// in name order.
-pub fn perform_migrations<C: GenericClient>(
-    client: &mut C,
-    override_directory: Option<PathBuf>,
+pub fn perform_migrations(
+    client: &mut postgres::Client,
+    migrations_directory: Option<PathBuf>,
 ) -> Result<(), MigrationError> {
-    let path = match override_directory {
+    let Some(entries) = get_migration_targets(migrations_directory)? else {
+        return Ok(());
+    };
+
+    for entry in entries {
+        let sql = fs::read_to_string(entry.path())
+            .map_err(|source| MigrationError::ReadMigrationFile { source })?;
+        client
+            .batch_execute(&sql)
+            .map_err(|source| MigrationError::ExecuteMigration { source, sql })?;
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "async")]
+/// Runs the migrations in `current_dir()/migrations/*.sql` on the client, migrations are executed
+/// in name order.
+pub async fn perform_migrations_async(
+    client: &tokio_postgres::Client,
+    migrations_directory: Option<PathBuf>,
+) -> Result<(), MigrationError> {
+    let Some(entries) = get_migration_targets(migrations_directory)? else {
+        return Ok(());
+    };
+
+    for entry in entries {
+        let sql = fs::read_to_string(entry.path())
+            .map_err(|source| MigrationError::ReadMigrationFile { source })?;
+        client
+            .batch_execute(&sql)
+            .await
+            .map_err(|source| MigrationError::ExecuteMigration { source, sql })?;
+    }
+
+    Ok(())
+}
+
+fn get_migration_targets(
+    migrations_directory: Option<PathBuf>,
+) -> Result<Option<Vec<DirEntry>>, MigrationError> {
+    let path = match migrations_directory {
         Some(path) => path,
         None => {
             let Ok(current_dir) = current_dir() else {
-                return Ok(());
+                return Ok(None);
             };
             current_dir.join("migrations")
         }
     };
 
     if !fs::exists(&path).unwrap() {
-        return Ok(());
+        return Ok(None);
     }
 
     let directory =
@@ -46,15 +91,7 @@ pub fn perform_migrations<C: GenericClient>(
         .map_err(|source| MigrationError::ReadMigrationFile { source })?;
     entries.sort_by_key(|entry| entry.file_name());
 
-    for entry in entries {
-        let sql = fs::read_to_string(entry.path())
-            .map_err(|source| MigrationError::ReadMigrationFile { source })?;
-        client
-            .batch_execute(&sql)
-            .map_err(|source| MigrationError::ExecuteMigration { source, sql })?;
-    }
-
-    Ok(())
+    Ok(Some(entries))
 }
 
 /// Error variants for migrating a database.

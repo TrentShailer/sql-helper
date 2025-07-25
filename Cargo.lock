@@ -2103,7 +2103,7 @@ checksum = "296b3b025eef6a69faaca47d489660e0ca7a68310bfbef9740233fc0c79bbc3b"
 
 [[package]]
 name = "ts-sql-helper-derive"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "quote",
  "regex",
@@ -2113,7 +2113,7 @@ dependencies = [
 
 [[package]]
 name = "ts-sql-helper-lib"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "bytes",
  "jiff",
@@ -2124,6 +2124,7 @@ dependencies = [
  "serde",
  "testcontainers",
  "testcontainers-modules",
+ "tokio-postgres",
  "ts-sql-helper-derive",
  "uuid",
 ]

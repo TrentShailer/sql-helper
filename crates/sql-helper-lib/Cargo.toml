@@ -1,7 +1,7 @@
 [package]
 description = "Helpers for working with SQL in my projects."
 name = "ts-sql-helper-lib"
-version = "0.5.1"
+version = "0.6.0"
 
 authors.workspace = true
 edition.workspace = true
@@ -11,6 +11,7 @@ rust-version.workspace = true
 [dependencies]
 postgres = { workspace = true, features = ["with-uuid-1"] }
 postgres-types = { version = "0.2" }
+tokio-postgres = { version = "0.7", features = ["with-uuid-1"], optional = true }
 
 jiff = { version = "0.2", features = ["serde"] }
 
@@ -18,7 +19,7 @@ bytes = "1.0"
 postgres-protocol = "0.6.8"
 serde = { version = "1.0", features = ["derive"] }
 
-ts-sql-helper-derive = { version = "0.4", path = "../sql-helper-derive", optional = true }
+ts-sql-helper-derive = { version = "0.5", path = "../sql-helper-derive", optional = true }
 
 rand = { version = "0.9", optional = true }
 testcontainers = { workspace = true, optional = true }
@@ -26,6 +27,7 @@ testcontainers-modules = { workspace = true, optional = true }
 uuid = { version = "1", features = ["v4"], optional = true }
 
 [features]
+async = ["dep:tokio-postgres"]
 derive = ["dep:ts-sql-helper-derive"]
 test = ["dep:rand", "dep:testcontainers", "dep:testcontainers-modules", "dep:uuid"]
 

@@ -10,6 +10,8 @@ pub mod test;
 
 pub use error::SqlError;
 pub use from_row::{FromRow, ParseFromRow};
+#[cfg(feature = "async")]
+pub use migrations::perform_migrations_async;
 pub use migrations::{MigrationError, perform_migrations};
 pub use postgres_types_jiff_0_2::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp};
 
