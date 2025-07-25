@@ -4,310 +4,63 @@
 use std::sync::LazyLock;
 
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, quote_spanned};
+use quote::{quote, quote_spanned};
 use regex::Regex;
 use syn::{
-    Data, DeriveInput, Fields, GenericParam, Generics, Ident, LitInt, LitStr, Token, Type,
-    TypeParamBound, bracketed,
-    parse::{Parse, ParseStream},
-    parse_macro_input, parse_quote,
-    spanned::Spanned,
+    Data, DeriveInput, Fields, GenericParam, Generics, Type, TypeParamBound, parse_macro_input,
+    parse_quote, spanned::Spanned,
 };
 
-struct QueryMacroInput {
-    name: Ident,
-    query: LitStr,
-    optional_params: Vec<usize>,
-}
-impl Parse for QueryMacroInput {
-    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        if input.parse::<Ident>()? != Ident::new("name", input.span()) {
-            return Err(input.error("expected `name`"));
-        }
-        input.parse::<Token![:]>()?;
-        let name: Ident = input.parse()?;
-        input.parse::<Token![,]>()?;
+use crate::query::{
+    QueryMacroInput,
+    main_struct::create_main_struct,
+    parameters::{get_param_types, parameter_to_type},
+    row_struct::create_row_struct,
+    test::create_test,
+};
 
-        let mut ident = input.parse::<Ident>()?;
-        let optional_params = if ident == Ident::new("optional_params", input.span()) {
-            input.parse::<Token![:]>()?;
-
-            let content;
-            bracketed![content in input];
-            let optional_params: Vec<_> = content
-                .parse_terminated(LitInt::parse, Token![,])?
-                .iter()
-                .map(|v| v.base10_parse().unwrap())
-                .collect();
-
-            input.parse::<Token![,]>()?;
-
-            ident = input.parse::<Ident>()?;
-            optional_params
-        } else {
-            Vec::new()
-        };
-
-        if ident != Ident::new("query", input.span()) {
-            return Err(input.error("expected `query`"));
-        }
-        input.parse::<Token![:]>()?;
-        let query: LitStr = input.parse()?;
-
-        Ok(Self {
-            name,
-            query,
-            optional_params,
-        })
-    }
-}
+mod query;
 
 /// Macro for creating and test SQL.
 #[proc_macro]
 pub fn query(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as QueryMacroInput);
 
-    pub enum State {
-        Neutral,
-        ConsumingNumber { has_consumed_a_digit: bool },
-        ConsumingTypeSeparator,
-        ConsumingType { type_string: String },
-    }
-
     let query = input.query.value();
     static REGEX: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"(?m)(\r\n|\r|\n| ){2,}").unwrap());
     let query = REGEX.replace_all(query.trim(), " ");
 
-    let mut parameter_types = vec![];
-    let mut state = State::Neutral;
-    for character in query.chars() {
-        match &mut state {
-            State::Neutral => {
-                if character == '$' {
-                    state = State::ConsumingNumber {
-                        has_consumed_a_digit: false,
-                    };
-                }
+    let parameters: Vec<Type> = get_param_types(&query)
+        .into_iter()
+        .enumerate()
+        .map(|(index, parameter)| {
+            let r#type = parameter_to_type(&parameter);
+            if input
+                .optional_params
+                .as_ref()
+                .is_some_and(|params| params.contains(&(index + 1)))
+            {
+                parse_quote!(Option<#r#type>)
+            } else {
+                r#type
             }
-            State::ConsumingNumber {
-                has_consumed_a_digit,
-            } => {
-                if character.is_ascii_digit() {
-                    *has_consumed_a_digit = true;
-                } else if character == ':' {
-                    state = State::ConsumingTypeSeparator;
-                } else {
-                    if *has_consumed_a_digit {
-                        parameter_types.push("unknown".to_string());
-                    }
-                    state = State::Neutral;
-                }
-            }
-            State::ConsumingTypeSeparator => {
-                if character.is_ascii_alphabetic() {
-                    state = State::ConsumingType {
-                        type_string: character.to_string(),
-                    };
-                } else if character != ':' {
-                    parameter_types.push("unknown".to_string());
-                    state = State::Neutral;
-                }
-            }
-            State::ConsumingType { type_string } => {
-                if character.is_ascii_alphabetic() || character == '[' || character == ']' {
-                    type_string.push(character);
-                } else {
-                    parameter_types.push(type_string.to_uppercase());
-                    state = State::Neutral;
-                }
-            }
-        }
-    }
-    match state {
-        State::Neutral => {}
-        State::ConsumingNumber {
-            has_consumed_a_digit,
-        } => {
-            if has_consumed_a_digit {
-                parameter_types.push("unknown".to_string());
-            }
-        }
-        State::ConsumingTypeSeparator => {
-            parameter_types.push("unknown".to_string());
-        }
-        State::ConsumingType { type_string } => {
-            parameter_types.push(type_string.to_uppercase());
-        }
-    }
+        })
+        .collect();
 
     let struct_name = input.name;
-    let param_struct_name = format_ident!("{struct_name}Params");
-    let param_count = parameter_types.len();
 
-    const KNOWN_TYPES: [&str; 30] = [
-        "BOOL",
-        "BOOL[]",
-        "BYTEA",
-        "BYTEA[]",
-        "CHAR",
-        "CHAR[]",
-        "INT8",
-        "INT8[]",
-        "INT4",
-        "INT4[]",
-        "INT2",
-        "INT2[]",
-        "FLOAT8",
-        "FLOAT8[]",
-        "FLOAT4",
-        "FLOAT4[]",
-        "UUID",
-        "UUID[]",
-        "TEXT",
-        "VARCHAR",
-        "VARCHAR[]",
-        "TEXT[]",
-        "TIMESTAMP",
-        "TIMESTAMP[]",
-        "TIMESTAMPTZ",
-        "TIMESTAMPTZ[]",
-        "DATE",
-        "DATE[]",
-        "TIME",
-        "TIME[]",
-    ];
-    let param_types: Vec<Type> = parameter_types
-        .iter()
-        .enumerate()
-        .map(|(index, name)| {
-            let param_number = index + 1;
-            let param_type = match name.as_str() {
-                "BOOL" => parse_quote!(&'a bool),
-                "BOOL[]" => parse_quote!(&'a [bool]),
-                "BYTEA" => parse_quote!(&'a [u8]),
-                "BYTEA[]" => parse_quote!(&'a [Vec<u8>]),
-                "CHAR" => parse_quote!(&'a i8),
-                "CHAR[]" => parse_quote!(&'a [i8]),
-                "INT8" => parse_quote!(&'a i64),
-                "INT8[]" => parse_quote!(&'a [i64]),
-                "INT4" => parse_quote!(&'a i32),
-                "INT4[]" => parse_quote!(&'a [i32]),
-                "INT2" => parse_quote!(&'a i16),
-                "INT2[]" => parse_quote!(&'a [i16]),
-                "FLOAT8" => parse_quote!(&'a f64),
-                "FLOAT8[]" => parse_quote!(&'a [f64]),
-                "FLOAT4" => parse_quote!(&'a f32),
-                "FLOAT4[]" => parse_quote!(&'a [f32]),
-                "UUID" => parse_quote!(&'a uuid::Uuid),
-                "UUID[]" => parse_quote!(&'a [uuid::Uuid]),
-                "TEXT" | "VARCHAR" => parse_quote!(&'a str),
-                "VARCHAR[]" | "TEXT[]" => parse_quote!(&'a [String]),
-                "TIMESTAMP" => parse_quote!(&'a ts_sql_helper_lib::SqlDateTime),
-                "TIMESTAMP[]" => parse_quote!(&'a [ts_sql_helper_lib::SqlDateTime]),
-                "TIMESTAMPTZ" => parse_quote!(&'a ts_sql_helper_lib::SqlTimestamp),
-                "TIMESTAMPTZ[]" => parse_quote!(&'a [ts_sql_helper_lib::SqlTimestamp]),
-                "DATE" => parse_quote!(&'a ts_sql_helper_lib::SqlDate),
-                "DATE[]" => parse_quote!(&'a [ts_sql_helper_lib::SqlDate]),
-                "TIME" => parse_quote!(&'a ts_sql_helper_lib::SqlTime),
-                "TIME[]" => parse_quote!(&'a [ts_sql_helper_lib::SqlTime]),
-
-                _ => parse_quote!(&'a (dyn ts_sql_helper_lib::postgres::types::ToSql + Sync)),
-            };
-            if input.optional_params.contains(&param_number) {
-                parse_quote!(Option<#param_type>)
-            } else {
-                param_type
-            }
-        })
-        .collect();
-    let param_names: Vec<Ident> = (1..param_count + 1)
-        .map(|number| format_ident!("p{number}"))
-        .collect();
-
-    let params: Vec<_> = param_types
-        .iter()
-        .enumerate()
-        .map(|(index, field_type)| {
-            let name = &param_names[index];
-            quote! {
-                #name: #field_type
-            }
-        })
-        .collect();
-
-    let pub_params = params.iter().map(|param| quote! {pub #param});
-    let self_params = param_names.iter().enumerate().map(|(index, param)| {
-        let type_string = &parameter_types[index];
-        if KNOWN_TYPES.contains(&type_string.as_str()) {
-            quote!(&self.#param)
-        } else {
-            quote!(self.#param)
-        }
-    });
-
-    let test_name = format_ident!("test_{struct_name}");
-    let test = quote! {
-        #[cfg(test)]
-        #[allow(non_snake_case)]
-        #[test]
-        fn #test_name() {
-            use ts_sql_helper_lib::test::get_test_database;
-
-            let (mut client, _container) = get_test_database();
-            let statement = client.prepare(#struct_name::QUERY);
-            assert!(statement.is_ok(), "invalid query `{}`: {}", #struct_name::QUERY, statement.unwrap_err());
-            let statement = statement.unwrap();
-
-            let mut data: Vec<Box<dyn ts_sql_helper_lib::postgres_types::ToSql + Sync>> = Vec::new();
-            let params = statement.params();
-            for param in params.iter() {
-                match ts_sql_helper_lib::test::data_for_type(param) {
-                    Some(param_data) => data.push(param_data),
-                    None => panic!("unsupported parameter type `{}`", param.name()),
-                }
-            }
-
-            let borrowed_data: Vec<&(dyn ts_sql_helper_lib::postgres_types::ToSql + Sync)> =
-                data.iter().map(|data| data.as_ref()).collect();
-
-            let result = client.execute(&statement, borrowed_data.as_slice());
-            if let Err(error) = result {
-                use ts_sql_helper_lib::postgres::error::SqlState;
-
-                assert!(
-                    matches!(
-                        error.code(),
-                        Some(&SqlState::FOREIGN_KEY_VIOLATION) | Some(&SqlState::CHECK_VIOLATION)
-                    ),
-                    "invalid query `{}`: {error}",
-                    #struct_name::QUERY
-                );
-            }
-        }
+    let main_struct = create_main_struct(&struct_name, &query, &parameters);
+    let test = create_test(&struct_name);
+    let row_struct = if let Some(row_fields) = input.row {
+        create_row_struct(&struct_name, &row_fields)
+    } else {
+        proc_macro2::TokenStream::new()
     };
+
     quote! {
-        struct #struct_name;
-        impl #struct_name {
-            pub const QUERY: &str = #query;
-            pub fn params<'a>(#( #params ),*) -> #param_struct_name<'a> {
-                #param_struct_name {
-                    #( #param_names , )*
-                    phantom_data: core::marker::PhantomData,
-                }
-            }
-        }
-        struct #param_struct_name<'a> {
-            #( #pub_params , )*
-            pub phantom_data: core::marker::PhantomData<&'a ()>,
-        }
-        impl<'a>  #param_struct_name<'a> {
-            pub fn as_array(&'a self) -> [&'a (dyn ts_sql_helper_lib::postgres::types::ToSql + Sync); #param_count] {
-                [
-                    #( #self_params , )*
-                ]
-            }
-        }
+        #main_struct
+        #row_struct
         #test
     }
     .into()

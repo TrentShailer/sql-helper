@@ -10,6 +10,7 @@ rust-version = "1.88"
 
 [workspace.dependencies]
 postgres = { version = "0.19" }
+postgres-types = { version = "0.2" }
 
 ts-sql-helper-derive = { path = "crates/sql-helper-derive" }
 ts-sql-helper-lib = { path = "crates/sql-helper-lib" }
