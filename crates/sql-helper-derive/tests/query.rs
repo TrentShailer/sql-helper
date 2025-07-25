@@ -8,11 +8,6 @@ query! {
     name: Advanced,
     optional_params: [1],
     query: r#"
-            UPDATE
-                public_keys
-            SET
-                last_used = $1::TIMESTAMPTZ,
-                signature_counter = $2
-            WHERE
-                raw_id = $3::BYTEA"#
+        INSERT INTO challenges(challenge, origin)
+        VALUES ($1::BYTEA, $2::VARCHAR);"#
 }

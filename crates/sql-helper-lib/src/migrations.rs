@@ -12,6 +12,8 @@ pub fn perform_migrations<C: GenericClient>(client: &mut C) -> Result<(), Migrat
         return Ok(());
     };
 
+    dbg!(&current_dir);
+
     let migrations_dir = current_dir.join("migrations");
     if !fs::exists(&migrations_dir).unwrap() {
         return Ok(());

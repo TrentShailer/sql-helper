@@ -13,10 +13,11 @@ proc-macro = true
 
 [dependencies]
 quote = { version = "1" }
+regex = { version = "1.11", default-features = false, features = ["std"] }
 syn = { version = "2", features = ["extra-traits"] }
 
 [dev-dependencies]
-ts-sql-helper-lib = { path = "../sql-helper-lib" }
+ts-sql-helper-lib = { path = "../sql-helper-lib", features = ["test"] }
 
 [lints]
 workspace = true

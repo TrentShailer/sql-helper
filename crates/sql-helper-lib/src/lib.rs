@@ -5,6 +5,7 @@ mod error;
 mod from_row;
 mod migrations;
 mod postgres_types_jiff_0_2;
+#[cfg(feature = "test")]
 pub mod test;
 
 pub use error::SqlError;

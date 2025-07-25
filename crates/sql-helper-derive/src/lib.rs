@@ -1,8 +1,11 @@
 //! Derives for SQL helper
 //!
 
+use std::sync::LazyLock;
+
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
+use regex::Regex;
 use syn::{
     Data, DeriveInput, Fields, GenericParam, Generics, Ident, LitInt, LitStr, Token, Type,
     TypeParamBound, bracketed,
@@ -72,6 +75,10 @@ pub fn query(input: TokenStream) -> TokenStream {
     }
 
     let query = input.query.value();
+    static REGEX: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?m)(\r\n|\r|\n| ){2,}").unwrap());
+    let query = REGEX.replace_all(query.trim(), " ");
+
     let mut parameter_types = vec![];
     let mut state = State::Neutral;
     for character in query.chars() {
@@ -245,32 +252,37 @@ pub fn query(input: TokenStream) -> TokenStream {
         #[allow(non_snake_case)]
         #[test]
         fn #test_name() {
-            use ts_sql_helper_lib::test::get_test_database_connection;
+            use ts_sql_helper_lib::test::get_test_database;
 
-            let (client, _teardown) = get_test_database_connection();
-            let mut client = client.lock().unwrap();
-            let statement = client.prepare(#struct_name::QUERY).unwrap();
+            let (mut client, _container) = get_test_database();
+            let statement = client.prepare(#struct_name::QUERY);
+            assert!(statement.is_ok(), "invalid query `{}`: {}", #struct_name::QUERY, statement.unwrap_err());
+            let statement = statement.unwrap();
 
             let mut data: Vec<Box<dyn ts_sql_helper_lib::postgres_types::ToSql + Sync>> = Vec::new();
-
             let params = statement.params();
-            for (param_index, param) in params.iter().enumerate() {
-                data.push(ts_sql_helper_lib::test::data_for_type(param).unwrap());
+            for param in params.iter() {
+                match ts_sql_helper_lib::test::data_for_type(param) {
+                    Some(param_data) => data.push(param_data),
+                    None => panic!("unsupported parameter type `{}`", param.name()),
+                }
             }
 
             let borrowed_data: Vec<&(dyn ts_sql_helper_lib::postgres_types::ToSql + Sync)> =
                 data.iter().map(|data| data.as_ref()).collect();
 
-            if let Err(error) = client.execute(&statement, borrowed_data.as_slice()) {
-                if let Some(error) = error.as_db_error() {
-                    assert!(matches!(
+            let result = client.execute(&statement, borrowed_data.as_slice());
+            if let Err(error) = result {
+                use ts_sql_helper_lib::postgres::error::SqlState;
+
+                assert!(
+                    matches!(
                         error.code(),
-                        &ts_sql_helper_lib::postgres::error::SqlState::FOREIGN_KEY_VIOLATION
-                            | &ts_sql_helper_lib::postgres::error::SqlState::CHECK_VIOLATION
-                    ));
-                } else {
-                    assert!(false, "{error}")
-                }
+                        Some(&SqlState::FOREIGN_KEY_VIOLATION) | Some(&SqlState::CHECK_VIOLATION)
+                    ),
+                    "invalid query `{}`: {error}",
+                    #struct_name::QUERY
+                );
             }
         }
     };
