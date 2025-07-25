@@ -249,10 +249,31 @@ pub fn query(input: TokenStream) -> TokenStream {
 
             let (client, _teardown) = get_test_database_connection();
             let mut client = client.lock().unwrap();
-            client.prepare(#struct_name::QUERY).unwrap();
+            let statement = client.prepare(#struct_name::QUERY).unwrap();
+
+            let mut data: Vec<Box<dyn ts_sql_helper_lib::postgres_types::ToSql + Sync>> = Vec::new();
+
+            let params = statement.params();
+            for (param_index, param) in params.iter().enumerate() {
+                data.push(ts_sql_helper_lib::test::data_for_type(param).unwrap());
+            }
+
+            let borrowed_data: Vec<&(dyn ts_sql_helper_lib::postgres_types::ToSql + Sync)> =
+                data.iter().map(|data| data.as_ref()).collect();
+
+            if let Err(error) = client.execute(&statement, borrowed_data.as_slice()) {
+                if let Some(error) = error.as_db_error() {
+                    assert!(matches!(
+                        error.code(),
+                        &ts_sql_helper_lib::postgres::error::SqlState::FOREIGN_KEY_VIOLATION
+                            | &ts_sql_helper_lib::postgres::error::SqlState::CHECK_VIOLATION
+                    ));
+                } else {
+                    assert!(false, "{error}")
+                }
+            }
         }
     };
-
     quote! {
         struct #struct_name;
         impl #struct_name {
