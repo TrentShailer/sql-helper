@@ -2103,7 +2103,7 @@ checksum = "296b3b025eef6a69faaca47d489660e0ca7a68310bfbef9740233fc0c79bbc3b"
 
 [[package]]
 name = "ts-sql-helper-derive"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "postgres-types",
  "proc-macro2",
@@ -2115,7 +2115,7 @@ dependencies = [
 
 [[package]]
 name = "ts-sql-helper-lib"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "bytes",
  "jiff",

@@ -46,7 +46,7 @@ pub fn get_param_types(sql: &str) -> Vec<Type> {
                 }
             }
             State::ConsumingType { type_string } => {
-                if character.is_ascii_alphabetic() || character == '[' || character == ']' {
+                if character.is_ascii_alphanumeric() || character == '[' || character == ']' {
                     type_string.push(character);
                 } else {
                     parameter_types.push(type_string.to_uppercase());
