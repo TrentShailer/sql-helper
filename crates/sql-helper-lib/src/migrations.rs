@@ -1,26 +1,32 @@
 //! Helpers for running migrations
 //!
 
-use std::{env::current_dir, ffi::OsStr, fs, io};
+use std::{env::current_dir, ffi::OsStr, fs, io, path::PathBuf};
 
 use postgres::GenericClient;
 
 /// Runs the migrations in `current_dir()/migrations/*.sql` on the client, migrations are executed
 /// in name order.
-pub fn perform_migrations<C: GenericClient>(client: &mut C) -> Result<(), MigrationError> {
-    let Ok(current_dir) = current_dir() else {
-        return Ok(());
+pub fn perform_migrations<C: GenericClient>(
+    client: &mut C,
+    override_directory: Option<PathBuf>,
+) -> Result<(), MigrationError> {
+    let path = match override_directory {
+        Some(path) => path,
+        None => {
+            let Ok(current_dir) = current_dir() else {
+                return Ok(());
+            };
+            current_dir.join("migrations")
+        }
     };
 
-    dbg!(&current_dir);
-
-    let migrations_dir = current_dir.join("migrations");
-    if !fs::exists(&migrations_dir).unwrap() {
+    if !fs::exists(&path).unwrap() {
         return Ok(());
     }
 
-    let directory = fs::read_dir(&migrations_dir)
-        .map_err(|source| MigrationError::ReadMigrationDirectory { source })?;
+    let directory =
+        fs::read_dir(&path).map_err(|source| MigrationError::ReadMigrationDirectory { source })?;
     let mut entries: Vec<_> = directory
         .filter_map(|entry| match entry {
             Ok(entry) => {

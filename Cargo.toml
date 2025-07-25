@@ -14,6 +14,9 @@ postgres = { version = "0.19" }
 ts-sql-helper-derive = { path = "crates/sql-helper-derive" }
 ts-sql-helper-lib = { path = "crates/sql-helper-lib" }
 
+testcontainers = { version = "0.24", features = ["blocking"] }
+testcontainers-modules = { version = "0.12", features = ["blocking", "postgres"] }
+
 # Timestamps
 [workspace.lints.rust]
 "deprecated_in_future" = "warn"

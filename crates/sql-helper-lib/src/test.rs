@@ -16,7 +16,7 @@ pub fn get_test_database() -> (postgres::Client, Container<Postgres>) {
 
     let connection_string = format!("postgres://postgres:postgres@{host_ip}:{host_port}/postgres");
     let mut client = postgres::Client::connect(&connection_string, postgres::NoTls).unwrap();
-    perform_migrations(&mut client).unwrap();
+    perform_migrations(&mut client, None).unwrap();
 
     (client, container)
 }

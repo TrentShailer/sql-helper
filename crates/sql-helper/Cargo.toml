@@ -1,7 +1,7 @@
 [package]
 name = "sql-helper"
 publish = false
-version = "0.5.4"
+version = "0.6.0"
 
 authors.workspace = true
 edition.workspace = true
@@ -9,26 +9,16 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-# Generating source code
-convert_case = { version = "0.8" }
-proc-macro2 = { version = "1.0", default-features = false }
-quote = "1.0"
-syn = "2.0"
-
 # CLI
 clap = { version = "4.5", features = ["derive"] }
-regex = { version = "1.11", default-features = false, features = ["std"] }
-
-# Generating data
-rand = "0.9"
-uuid = { version = "1", features = ["v4"] }
 
 # DB
-postgres = { workspace = true, features = ["with-uuid-1"] }
+postgres = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
 
 # CLI Helper
-ts-cli-helper = { version = "0.5", features = ["generate"] }
-ts-rust-helper = { version = "0.5", features = ["styled"] }
+ts-cli-helper = { version = "0.6" }
+ts-rust-helper = { version = "0.9", features = ["styled"] }
 
-jiff = { version = "0.2" }
 ts-sql-helper-lib = { workspace = true }
