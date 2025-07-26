@@ -1744,7 +1744,7 @@ dependencies = [
 
 [[package]]
 name = "sql-helper"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "clap",
  "postgres",
@@ -2115,7 +2115,7 @@ dependencies = [
 
 [[package]]
 name = "ts-sql-helper-lib"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "bytes",
  "jiff",

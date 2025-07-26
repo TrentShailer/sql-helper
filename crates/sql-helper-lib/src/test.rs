@@ -2,7 +2,7 @@
 
 use postgres_types::{ToSql, Type};
 use rand::{Rng, distr::Alphanumeric, random_bool};
-use testcontainers::{Container, runners::SyncRunner};
+use testcontainers::{Container, ImageExt, runners::SyncRunner};
 use testcontainers_modules::postgres::Postgres;
 use uuid::Uuid;
 
@@ -10,11 +10,11 @@ use crate::{SqlDate, SqlDateTime, SqlTime, SqlTimestamp, perform_migrations};
 
 /// Creates a test database container for the test
 pub fn get_test_database() -> (postgres::Client, Container<Postgres>) {
-    let container = Postgres::default().start().unwrap();
-    let host_ip = container.get_host().unwrap();
-    let host_port = container.get_host_port_ipv4(5432).unwrap();
+    let container = Postgres::default().with_tag("17-alpine").start().unwrap();
+    let ip = container.get_host().unwrap();
+    let port = container.get_host_port_ipv4(5432).unwrap();
 
-    let connection_string = format!("postgres://postgres:postgres@{host_ip}:{host_port}/postgres");
+    let connection_string = format!("postgres://postgres:postgres@{ip}:{port}/postgres");
     let mut client = postgres::Client::connect(&connection_string, postgres::NoTls).unwrap();
     perform_migrations(&mut client, None).unwrap();
 

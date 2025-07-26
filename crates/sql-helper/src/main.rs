@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use testcontainers::runners::SyncRunner;
+use testcontainers::{ImageExt, runners::SyncRunner};
 use testcontainers_modules::postgres::Postgres;
 use ts_cli_helper::{Action, ActionResult, print_success};
 use ts_rust_helper::error::ReportProgramExit;
@@ -41,12 +41,14 @@ fn main() -> ReportProgramExit {
         Commands::StartDatabase { migrations } => {
             let mut action = Action::new("Starting", "Started", "database container", 0);
 
-            let container = Postgres::default().start().bind_error(&mut action)?;
-            let host_ip = container.get_host().bind_error(&mut action)?;
-            let host_port = container.get_host_port_ipv4(5432).bind_result(action)?;
+            let container = Postgres::default()
+                .with_tag("17-alpine")
+                .start()
+                .bind_error(&mut action)?;
+            let ip = container.get_host().bind_error(&mut action)?;
+            let port = container.get_host_port_ipv4(5432).bind_result(action)?;
 
-            let connection_string =
-                format!("postgres://postgres:postgres@{host_ip}:{host_port}/postgres");
+            let connection_string = format!("postgres://postgres:postgres@{ip}:{port}/postgres");
 
             // Perform migrations
             {
